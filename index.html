@@ -121,10 +121,10 @@
     let soundEnabled = true;
     let audioStarted = false;
 
-    function playTone(startFrequency, endFrequency, duration, waveform, volume) {
+    function playTone(startFrequency, endFrequency, duration, waveform, volume, delay = 0) {
       if (!soundEnabled || !audioContext) return;
 
-      const startTime = audioContext.currentTime;
+      const startTime = audioContext.currentTime + delay;
       const oscillator = audioContext.createOscillator();
       const gain = audioContext.createGain();
       oscillator.type = waveform;
@@ -137,6 +137,20 @@
       gain.connect(masterGain);
       oscillator.start(startTime);
       oscillator.stop(startTime + duration + 0.02);
+    }
+
+    function playExplosionSound() {
+      playTone(480, 90, 0.18, 'sawtooth', 0.16);
+    }
+
+    function playGameOverSound() {
+      playTone(120, 45, 0.5, 'sawtooth', 0.22, 0.26);
+    }
+
+    function playVictorySound() {
+      playTone(523, 659, 0.14, 'triangle', 0.14, 0.2);
+      playTone(659, 784, 0.14, 'triangle', 0.14, 0.37);
+      playTone(784, 1047, 0.2, 'triangle', 0.14, 0.54);
     }
 
     function playMusicNote() {
@@ -199,7 +213,11 @@
     }
 
     soundButton.addEventListener('click', toggleSound);
-    canvas.addEventListener('pointerdown', startAudio);
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target !== soundButton) {
+        startAudio();
+      }
+    });
     const stars = Array.from({ length: 100 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
@@ -473,6 +491,7 @@
 
       if (invaders.some((invader) => invader.y + invader.height >= player.y)) {
         gameState = 'gameOver';
+        playGameOverSound();
         return;
       }
 
@@ -482,8 +501,10 @@
 
       if (player.lives <= 0) {
         gameState = 'gameOver';
+        playGameOverSound();
       } else if (invaders.length === 0) {
         gameState = 'won';
+        playVictorySound();
       }
     }
 
@@ -577,6 +598,7 @@
             playerBullets.splice(bulletIndex, 1);
             invaders.splice(invaderIndex, 1);
             player.score += invaderPoints[invader.type];
+            playExplosionSound();
             break;
           }
         }
