@@ -55,6 +55,26 @@
       color: #fff;
     }
 
+    .sound-toggle {
+      margin-top: 16px;
+      padding: 8px 12px;
+      border: 1px solid #536a9e;
+      border-radius: 6px;
+      background: #182440;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .sound-toggle:hover {
+      background: #24365d;
+    }
+
+    .sound-toggle:focus-visible {
+      outline: 2px solid #89c2ff;
+      outline-offset: 2px;
+    }
+
     canvas {
       display: block;
       background: #030611;
@@ -83,6 +103,7 @@
         <li><strong>Shoot:</strong> Space Bar</li>
         <li><strong>Restart:</strong> Press R</li>
       </ul>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">Enable sound</button>
     </aside>
 
     <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -91,6 +112,94 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const soundButton = document.getElementById('soundToggle');
+    const musicNotes = [220, 261.63, 329.63, 392, 329.63, 261.63, 196, 220];
+    let audioContext = null;
+    let masterGain = null;
+    let musicTimer = null;
+    let musicNoteIndex = 0;
+    let soundEnabled = true;
+    let audioStarted = false;
+
+    function playTone(startFrequency, endFrequency, duration, waveform, volume) {
+      if (!soundEnabled || !audioContext) return;
+
+      const startTime = audioContext.currentTime;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = waveform;
+      oscillator.frequency.setValueAtTime(startFrequency, startTime);
+      oscillator.frequency.exponentialRampToValueAtTime(endFrequency, startTime + duration);
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      oscillator.connect(gain);
+      gain.connect(masterGain);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.02);
+    }
+
+    function playMusicNote() {
+      const note = musicNotes[musicNoteIndex];
+      playTone(note, note * 0.98, 0.42, 'triangle', 0.12);
+      if (musicNoteIndex % 2 === 0) {
+        playTone(note / 2, note / 2 * 0.99, 0.7, 'sine', 0.055);
+      }
+      musicNoteIndex = (musicNoteIndex + 1) % musicNotes.length;
+    }
+
+    function startBackgroundMusic() {
+      if (musicTimer !== null) return;
+
+      musicNoteIndex = 0;
+      playMusicNote();
+      musicTimer = window.setInterval(playMusicNote, 480);
+    }
+
+    function startAudio() {
+      if (audioStarted || !soundEnabled) return;
+
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) {
+        soundEnabled = false;
+        soundButton.textContent = 'Audio unavailable';
+        soundButton.disabled = true;
+        return;
+      }
+
+      audioContext = new AudioContextConstructor();
+      masterGain = audioContext.createGain();
+      masterGain.gain.value = 0.45;
+      masterGain.connect(audioContext.destination);
+      audioStarted = true;
+      soundButton.textContent = 'Mute sound';
+      soundButton.setAttribute('aria-pressed', 'true');
+      startBackgroundMusic();
+    }
+
+    function toggleSound() {
+      if (!audioStarted) {
+        startAudio();
+        return;
+      }
+
+      soundEnabled = !soundEnabled;
+      if (soundEnabled) {
+        masterGain.gain.setTargetAtTime(0.45, audioContext.currentTime, 0.03);
+        soundButton.textContent = 'Mute sound';
+        soundButton.setAttribute('aria-pressed', 'true');
+        startBackgroundMusic();
+      } else {
+        masterGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.03);
+        window.clearInterval(musicTimer);
+        musicTimer = null;
+        soundButton.textContent = 'Enable sound';
+        soundButton.setAttribute('aria-pressed', 'false');
+      }
+    }
+
+    soundButton.addEventListener('click', toggleSound);
+    canvas.addEventListener('pointerdown', startAudio);
     const stars = Array.from({ length: 100 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
@@ -298,6 +407,10 @@
     }
 
     document.addEventListener('keydown', (event) => {
+      if (event.target !== soundButton) {
+        startAudio();
+      }
+
       if (event.code === 'KeyR' && gameState !== 'playing') {
         resetGame();
         event.preventDefault();
@@ -386,6 +499,7 @@
           width: 4,
           height: 12
         });
+        playTone(880, 320, 0.12, 'square', 0.18);
         playerShotCooldown = playerShotCooldownDuration;
       }
     }
@@ -492,6 +606,7 @@
 
           if (playerInvulnerability === 0) {
             player.lives--;
+            playTone(180, 55, 0.32, 'sawtooth', 0.35);
             playerInvulnerability = playerInvulnerabilityDuration;
             player.x = canvas.width / 2 - player.width / 2;
           }
