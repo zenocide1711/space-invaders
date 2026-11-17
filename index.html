@@ -19,6 +19,42 @@
       font-family: Arial, sans-serif;
     }
 
+    .game-shell {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .controls-panel {
+      width: 220px;
+      padding: 18px 16px;
+      border: 1px solid #30395e;
+      border-radius: 12px;
+      background: rgba(15, 18, 35, 0.92);
+      box-shadow: 0 0 18px rgba(75, 110, 255, 0.12);
+      color: #dfe7ff;
+    }
+
+    .controls-panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #89c2ff;
+    }
+
+    .controls-panel ul {
+      margin: 0;
+      padding-left: 18px;
+      line-height: 1.7;
+      font-size: 0.96rem;
+    }
+
+    .controls-panel li strong {
+      color: #fff;
+    }
+
     canvas {
       display: block;
       background: #030611;
@@ -27,7 +63,18 @@
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div class="game-shell">
+    <aside class="controls-panel" aria-label="Game controls">
+      <h2>Controls</h2>
+      <ul>
+        <li><strong>Move:</strong> Left / Right Arrow Keys</li>
+        <li><strong>Shoot:</strong> Space Bar</li>
+        <li><strong>Restart:</strong> Press R</li>
+      </ul>
+    </aside>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+  </div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
